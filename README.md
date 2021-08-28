@@ -122,7 +122,7 @@ for epoch in range(3):
         epoch, loss.item(), np.mean(dur)))
 ```
 
-Please note that for GNN model it cannot be trainned for too much loop as it has the property of similarity.
+Please note that for GNN model it cannot be trainned for too much epoch (recommend to train for 5 epoch) as it has the property of similarity.
 
 #### Initializer
 Initializer is a class of EGUM to help you prepare the input of EGUM. For modifications on graph, it can be divided into six part:
@@ -144,7 +144,7 @@ For these six kinds of change, EGUM provide corresponding APIs to help you setup
 |Delete ndoes from graph|delete_nodes()|Delete some nodes from graph (Can delete multiple nodes a time)|
 |Delete edges from graph|delete_edges()|Delete some edges from graph (Can delete multiple edges a time)|
 
-Please note that these APIs may have different input type, according to different functions they perform, but they have a uniform return type:
+Please note that these APIs may have different input type (please refer to API reference), according to different functions they perform, but they have a uniform return type:
 ```Python
 # If no edge feature is passed in as parameters
 subgraph, subgraph_node_feat, graph, graph_node_feat = initializer_functions(...)
@@ -154,8 +154,70 @@ subgraph, subgraph_node_feat, subgraph_edge_feat, graph, graph_node_feat, graph_
 #### Extending EGUM
 EGUM is more like an interface with some supporting functions rather than a class, you need to extend it in order to make your model accelerated.
 
-However, unlike usual pytorch module, you don't need to create instance of different pytorch `nn.Module` again 
-## Project Structure
+However, unlike usual pytorch module, you don't need to create instance of different pytorch `nn.Module` again. What you only need to do is: Pass the trained model from step 0 to the super initializer. Following is the standardrized EGUM `__init__(self, model)` function:
+
+```python
+# You need to use EGUM as the father class
+class MyEGUM(EGUM):
+    # Your initializer must have model as parameter
+    # model is the model you train in step 0
+    def __init__(self, model):
+        # pass model to the super initializer
+        super(MyEGUM, self).__init__(model)
+        # You don't need to redefine your layers again
+        # You can define some extra parameters here
+```
+
+When extending EGUM, please kindly note that you don't need to rewrite your layers again, and it's strictly forbidden to redo layer definition when extending EGUM. Instead, EGUM will dynamically load the layers you define in trained model **with parameters**. If you redefine the layers, those layer won't hold parameters from trained model.
+
+Congratulation! Now you have complete half of extension, only thing left is to extend the `forward(self, **kwargs)` function to meet the requirement of `pytorch`. Generally speaking, all you need to do is copy the `forward()` function from your original model, paste the `forward` in new class and do three modification:
+1. Insert `self.initialize(graph, node_feat, edge_feat)` at the **first line** of your code, note that if you don't have edge_feat, you can ignore this parameter
+2. Insert `graph, node_feat = self.extend(graph, node_feat, edge_feat)` before **every layer** with message-passing, which means all the layers from `dgl.nn`, including `GATConv`, `GraphConv`, or other your self-defined layers. 
+3. Insert `graph, node_feat = self.back(graph, node_feat, edge_feat)` before your return, if you don't use edge_feat, you can ignore this parameters.
+
+For example, if I want to transform the `forward` from `GAT` model we create before to `MyEGUM`:
+
+Original GAT Code:
+```Python
+class GAT(nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_head=1):
+        super(GAT, self).__init__()
+        self.gatconv1 = GATConv(in_dim, hidden_dim, num_head)
+        self.gatconv2 = GATConv(hidden_dim, out_dim, num_head)
+        
+    def forward(self, graph, feat):
+        feat = self.gatconv1(graph, feat)
+        feat = F.relu(feat)
+        feat = self.gatconv2(graph, feat)
+        return feat
+```
+
+GAT in MyEGUM:
+```Python
+class MyEGUM(EGUM):
+    def __init__(self, model):
+        super(MyEGUM, self).__init__(model)
+        
+    # Extend the forward funciton
+    def forward(self, graph, feat):
+        # Add self.initialize at the first line, ignore the edge_feat parameter
+        self.initialize(graph, feat)
+        
+        # Add graph, feat = self.extend(graph, feat) before every layer invoktion 
+        graph, feat = self.extend(graph, feat)
+        feat = self.gatconv1(graph, feat)
+        feat = F.relu(feat)
+        
+        # Add graph, feat = self.extend(graph, feat) before every layer invoktion 
+        graph, feat = self.extend(graph, feat)
+        feat = self.gatconv2(graph, feat)
+        
+        # Add graph, feat = self.back(graph, feat) before your return
+        graph, feat = self.back(graph, feat)
+        return feat
+```
+
+## API reference
 EGUM provides two class `EGUM` and `initializer` to accelerate your GNN inference. Class `EGUM` is the core of EGUM and it provides all functions for acceleration. Another class, `initializer`, is the class initialize the input for EGUM.
 
 ### EGUM
