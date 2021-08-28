@@ -292,7 +292,7 @@ Congratulation!
 ## API reference
 EGUM provides two class `EGUM` and `initializer` to accelerate your GNN inference. Class `EGUM` is the core of EGUM and it provides all functions for acceleration. Another class, `initializer`, is the class initialize the input for EGUM. Even more, EGUM has a utils class which provides some pytorch tensor logical operations and a tensor based parallel computing hashmap (dictionary).
 
-### EGUM
+### Main Body: EGUM
 * `__init__(self, model)`
 * `load_graph(self, graph, node_feat, edge_feat=None)`
 * `initialize(self, subgraph, node_feat, edge_feat=None)`
