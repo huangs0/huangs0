@@ -20,13 +20,13 @@ However, if you don't want to use the accelerated mode, you can simply download 
 EGUM will be published to python package manager `pip` soon, now it only support install from source code
 
 ### Tutorial
-Three steps to use EGUM for GNN acceleration:
+Four steps to use EGUM for GNN acceleration:
 0. Train your model
 1. Use Initializer to step up your dataset
 2. Extend the EGUM model
 3. Create instance of your customized EGUM model and run it
 
-#### Train your model
+#### 1. Train your model
 Please note that EGUM is only a GNN model inference acceleration tools, but not a training framework. To use this inference acceleration tools, you need to train your model before. Currently EGUM only support models from `dgl` with `pytorch` as backend, they're dependencies of EGUM. You can find how to create and train models from dgl documentation: https://docs.dgl.ai/guide/index.html, but two small demo about how to create classical GAT and GCN model about node classification using Cora dataset is as follows:
 
 First import necessary packages:
@@ -124,7 +124,7 @@ for epoch in range(3):
 
 Please note that for GNN model it cannot be trainned for too much epoch (recommend to train for 5 epoch) as it has the property of similarity.
 
-#### Initializer
+#### 2. Initializer
 Initializer is a class of EGUM to help you prepare the input of EGUM. For modifications on graph, it can be divided into six part:
 1. Add node(s) to graph
 2. Add edge(s) to graph
@@ -151,7 +151,7 @@ subgraph, subgraph_node_feat, graph, graph_node_feat = initializer_functions(...
 # If pass in edge features as parameters
 subgraph, subgraph_node_feat, subgraph_edge_feat, graph, graph_node_feat, graph_edge_feat = initializer_functions(...)
 ```
-#### Extending EGUM
+#### 3. Extending EGUM
 EGUM is more like an interface with some supporting functions rather than a class, you need to extend it in order to make your model accelerated.
 
 However, unlike usual pytorch module, you don't need to create instance of different pytorch `nn.Module` again. What you only need to do is: Pass the trained model from step 0 to the super initializer. Following is the standardrized EGUM `__init__(self, model)` function:
@@ -178,7 +178,7 @@ Congratulation! Now you have complete half of extension, only thing left is to e
 For example, if I want to transform the `forward` from `GAT` model we create before to `MyEGUM`:
 
 Original GAT Code:
-```Python
+```python
 class GAT(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_head=1):
         super(GAT, self).__init__()
@@ -193,7 +193,7 @@ class GAT(nn.Module):
 ```
 
 GAT in MyEGUM:
-```Python
+```python
 class MyEGUM(EGUM):
     def __init__(self, model):
         super(MyEGUM, self).__init__(model)
@@ -217,6 +217,78 @@ class MyEGUM(EGUM):
         return feat
 ```
 
+#### 4. Create instance of your customized EGUM model and run it
+Finally you can create your EGUM model and run it to see the result. To create an instance of EGUM, please note that you shall pass in the trained model from step 0 as parameter, which has been mentioned in step 3.
+
+```python
+my_egum = MyEGUM(model=net)
+```
+
+There's only a few steps to run the EGUM:
+1. Prepare the feature maps for nodes and edges
+2. load the feature maps and features
+3. run the model
+
+##### 4.1. Prepare feature maps
+EGUM relies on the graph locality and incremental subgraph extraction to accelerate graph inference. To make use of incremental subgraph extraction, we need to extract graph features for each layers, i.e, we need to prepare feature map of following graph in each layer. In later version of EGUM, it's now only at 0.0.1, an automatic execution of graph will be provided. But now, we need to prepare the feature maps ourselves, sorry for that. For example, if we want to prepare feature maps for `GCN` model we train before, we shall:
+
+Original Code of GCN
+```python
+class GCN(nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim):
+        super(GCN, self).__init__()
+        self.gcnconv1 = GraphConv(in_dim, hidden_dim)
+        self.gcnconv2 = GraphConv(hidden_dim, out_dim)
+        
+    def forward(self, graph, feat):
+        feat = self.gcnconv1(graph, feat)
+        feat = F.relu(feat)
+        feat = self.gcnconv2(graph, feat)
+        return feat
+```
+
+Code to extract feature maps for EGUM
+```pythhon
+# Create list to contain feature maps
+node_feat = []
+def extract(graph, feat):
+    feat = net.gcnconv1(graph, feat)
+    feat = F.relu(feat)
+    # Please append feat to node_feat list after normalization and activation
+    node_feat.append(feat)
+    feat = net.gcnconv2(graph, feat)
+    node_feat.append(feat)
+extract(graph, feat)
+```
+
+There's several reminders for you to define a correct function to collect feature maps:
+1. Remember to collect feature maps after activation layers and normalization layers, just insert the `node_feat.append()` directly before next message-passing nn layer like `gcnconv2(graph, feat)`
+2. Remember that the graph, feat shall be the original graph before the modification(please refers to the overview), which means it shall be the graph and node_feat at the input of initialization functions (Initializer.xxx), but not the return of initialization function, which represent the graph and feat after modification
+
+#### 4.2. load the graph and feat to egum
+EGUM provide an useful API to help you load the graph and feature to your customized EGUM model, `load_graph(graph, node_feat, edge_feat)`, please note that the graph shall be the input graph before modification, i.e, the **return graph** from initialzation function (Initializer.xxx). However, the node_feat, and edge_feat, shall be the node_feat and edge_feat you extract before (i.e, it's the excution result of original graph without modification), in Section 4.1:
+
+```python
+# if you don't have edge_feat, just ignore this parameter
+my_egum.load_graph(graph, node_feat, edge_feat)
+```
+
+#### 4.3 run the model
+To run the model, as required by pytorch, your input shall meet the requiremnt from `forward` function, and there's some additional requirements from EGUM framework:
+
+Please note that your input graph and features, including node features or edge_features, shall be the subgraph and subgraph features, i.e, the `subgraph, subgraph_node_feat, subgraph_edge_feat` return from initialization funciton, i.e, `Initialization.xxx`
+
+Also, plese kindly note that the output of egum will be in the similar form of initialiation function:
+```python
+# If no edge_feat is passed in
+graph, node_feat = egum(graph, node_feat)
+# If edge_feat is passed in
+graph, node_feat, edge_feat = egum(graph, node_feat, edge_feat)
+```
+
+Please note that output graph, node_feat, edge_feat is of the whole graph, i.e, it's the result of whole graph after GNN inference after modification but not the subgraph.
+
+Congratulation!
 ## API reference
 EGUM provides two class `EGUM` and `initializer` to accelerate your GNN inference. Class `EGUM` is the core of EGUM and it provides all functions for acceleration. Another class, `initializer`, is the class initialize the input for EGUM.
 
