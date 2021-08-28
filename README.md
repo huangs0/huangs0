@@ -352,3 +352,177 @@ Please note that input is the subgraph, with its node and edge features, but the
 
 #### forward(self, kwargs)
 This is an empty function left for user to implement, please refers to Tutorial Section 3 to learn how to implement EGUM.
+
+### Initailizer
+Initializer is a class contains many static functions, providing support to initialize the inputs for EGUM main body given the modifications. It provides:
+* new_node(g, node_feat, original_node_feat, original_edge_feat=None, predecessors=None, successors=None, edge_feat_prede=None, edge_feat_succe=None)
+* new_edges(g, source, destination, original_node_feat, original_edge_feat=None, edge_feat=None)
+* change_nodes(g, nodes, node_feat, original_node_feat, original_edge_feat=None)
+* change_edges(g, edges, edge_feat, original_node_feat, original_edge_feat)
+* delete_nodes(g, nodes, original_node_feat, original_edge_feat=None)
+* delete_edges(g, edges, original_node_feat, original_edge_feat=None)
+
+#### new_node(g, node_feat, original_node_feat, original_edge_feat=None, predecessors=None, successors=None, edge_feat_prede=None, edge_feat_succe=None)
+Parameters:
+* g: `dgl.graph`, the graph to be modified
+* node_feat: `torch.FloatTensor`, the node features for newly added node
+* original_node_feat: `torch.FloatTensor`, the node features for graph g
+* original_edge_feat: `torch.FloatTensor`, the edge features for graph g, not compulsory
+* predecessors: `torch.LongTensor`, the nodes as the predecessors of newly added node, not compulsory
+* successors: `torch.LongTensor`, the nodes as the successors of newly added node, not compulsory
+* edge_feat_prede: `torch.FloatTensor`, the edge features for edges between predecessors and newly added node, not compulsory
+* edge_feat_succe: `torch.FloatTensor`, the edge features for edges between successors and newly added node, not compulsory
+
+Return:
+* subgraph: subgraph of the modification place
+* subgraph_node_feat: node feature of subgraph
+* subgraph_edge_feat: edge feature of subgraph, will return only when edge_feat is input
+* graph: whole graph after modifcation
+* graph_node_feat: node features of whole graph
+* graph_edge_feat: edge features of whole graph, will return only when edge_feat is input
+
+This function will generate subgraph and graph with their corresponding node and edge features for modification case a new node is added
+
+#### new_edges(g, source, destination, original_node_feat, original_edge_feat=None, edge_feat=None)
+*  g: `dgl.graph`, the graph to be modified
+*  source: `torch.LongTensor`, the source of new edge to be added
+*  destination: `torch.LongTensor`, the destination of new edge to be added
+* original_node_feat: `torch.FloatTensor`, the node features for graph g
+* original_edge_feat: `torch.FloatTensor`, the edge features for graph g, not compulsory
+* edge_feat: edge features of newly added edges, not compulsory
+
+Return:
+* subgraph: subgraph of the modification place
+* subgraph_node_feat: node feature of subgraph
+* subgraph_edge_feat: edge feature of subgraph, will return only when edge_feat is input
+* graph: whole graph after modifcation
+* graph_node_feat: node features of whole graph
+* graph_edge_feat: edge features of whole graph, will return only when edge_feat is input
+
+This function will generate subgraph and graph with their corresponding node and edge features for modification case some new edges are added
+
+#### change_nodes(g, nodes, node_feat, original_node_feat, original_edge_feat=None)
+* g: `dgl.graph`, the graph to be modified
+* nodes: `torch.LongTensor`, nodes whose feature will be modified
+* node_feat: `torch.FloatTensor`, node_features of nodes after modification
+* original_node_feat: `torch.FloatTensor`, the node features for graph g
+* original_edge_feat: `torch.FloatTensor`, the edge features for graph g, not compulsory
+
+Return:
+* subgraph: subgraph of the modification place
+* subgraph_node_feat: node feature of subgraph
+* subgraph_edge_feat: edge feature of subgraph, will return only when edge_feat is input
+* graph: whole graph after modifcation
+* graph_node_feat: node features of whole graph
+* graph_edge_feat: edge features of whole graph, will return only when edge_feat is input
+
+This function will generate subgraph and graph with their corresponding node and edge features for modification case some nodes' features are modified
+
+#### change_edges(g, edges, edge_feat, original_node_feat, original_edge_feat)
+* g: `dgl.graph`, the graph to be modified
+* edges: `torch.LongTensor`, edges whose features will be modified
+* edge_feat: `torch.FloatTensor`, edge features of nodes after modification
+* original_node_feat: `torch.FloatTensor`, the node features for graph g
+* original_edge_feat: `torch.FloatTensor`, the edge features for graph g
+
+
+Return:
+* subgraph: subgraph of the modification place
+* subgraph_node_feat: node feature of subgraph
+* subgraph_edge_feat: edge feature of subgraph
+* graph: whole graph after modifcation
+* graph_node_feat: node features of whole graph
+* graph_edge_feat: edge features of whole graph
+
+This function will generate subgraph and graph with their corresponding node and edge features for modification case some edges' features are modified.
+
+Please note that edges features must be input, it's compulsory, different from other initialization functions
+
+#### delete_nodes(g, nodes, original_node_feat, original_edge_feat=None)
+* g: `dgl.graph`, the graph to be modified
+* nodes: `torch.LongTensor`, nodes to be deleted from graph g
+* original_node_feat: `torch.FloatTensor`, the node features for graph g
+* original_edge_feat: `torch.FloatTensor`, the edge features for graph g, not compulsory
+
+Return:
+* subgraph: subgraph of the modification place
+* subgraph_node_feat: node feature of subgraph
+* subgraph_edge_feat: edge feature of subgraph, will return only when edge_feat is input
+* graph: whole graph after modifcation
+* graph_node_feat: node features of whole graph
+* graph_edge_feat: edge features of whole graph, will return only when edge_feat is input
+
+This function will generate subgraph and graph with their corresponding node and edge features for modification case some nodes are deleted from graph
+
+#### delete_edges(g, edges, original_node_feat, original_edge_feat=None)
+* g: `dgl.graph`, the graph to be modified
+* edges: `torch.LongTensor`, edges to be deleted from graph
+* original_node_feat: `torch.FloatTensor`, the node features for graph g
+* original_edge_feat: `torch.FloatTensor`, the edge features for graph g, not compulsory
+
+Return:
+* subgraph: subgraph of the modification place
+* subgraph_node_feat: node feature of subgraph
+* subgraph_edge_feat: edge feature of subgraph, will return only when edge_feat is input
+* graph: whole graph after modifcation
+* graph_node_feat: node features of whole graph
+* graph_edge_feat: edge features of whole graph, will return only when edge_feat is input
+
+This function will generate subgraph and graph with their corresponding node and edge features for modification case some edges are deleted from graph.
+
+### utils
+utils provides some useful functions help you deal with toplogy operation with pytorch:
+* HashMap: a parallel computing hashmap
+* setdiff1d(ar1, ar2, ar3=None)
+* setin1d(ar1, ar2)
+
+Please note that implemention `setdiff1d(ar1, ar2, ar3=None)` and `setin1d(ar1, ar2)` is according to `numpy`!
+#### HashMap
+This class provide dictionary with parallel computing acceleration, implemented in C++ and CUDA. Support for CUDA is not yet finished...
+* `__init__(n, keys, values)`
+* `set(keys, values)`
+* `get(keys)`
+
+##### `__init__(n, keys, values)`
+Initialize the hash map with parameters:
+* n: the hash key, an int
+* keys: keys to be set, in form of `np.ndarray`, only accept integers
+* values: values to be set, in form of `np.ndarray`, only accept integers
+
+Return a hashmap
+##### set(keys, values)
+Set the key, value pairs to hash map
+* keys: keys to be set, in form of `np.ndarray`, only accept integers
+* values: values to be set, in form of `np.ndarray`, only accept integers
+
+No return
+##### get(keys)
+get values according to keys
+
+Parameters:
+* keys: keys to be set, in form of `np.ndarray`, only accept integers
+
+Returns:
+* values: values of corresponding keys, in form of `np.ndarray`
+
+#### setdiff1d(ar1, ar2, ar3=None)
+perform set operation ar1 - ar2, i.e, return the part of ar1 not in ar2. ar3 can be the array corresponding to ar1 (like the key:value pair in hash map), it will then only have the part corresponding to ar1. (Index Correpondence)
+
+Parameters:
+* ar1: `torch.Tensor` as left operand of '-'
+* ar2: `torch.Tensor` as right operand of '-'
+* ar3: `torch.Tensor` according to ar1, not compulsory
+
+Return:
+* ar1: `torch.Tensor`, result of ar1-ar2
+* ar3: `torch.Tensor`, result according to ar1, return only when ar3 is input
+
+#### setin1d(ar1, ar2)
+perform set operation ar1 and ar2, i.e, return the part of ar1 in ar2.
+
+Parameters:
+* ar1: `torch.Tensor` as left operand of 'and'
+* ar2: `torch.Tensor` as right operand of 'and'
+
+Return:
+* ar1: `torch.Tensor`, result of ar1 and ar2
