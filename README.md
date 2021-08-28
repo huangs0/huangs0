@@ -248,7 +248,7 @@ class GCN(nn.Module):
 ```
 
 Code to extract feature maps for EGUM
-```pythhon
+```python
 # Create list to contain feature maps
 node_feat = []
 def extract(graph, feat):
